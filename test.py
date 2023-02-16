@@ -5,7 +5,7 @@ import json
 from tqdm import tqdm
 
 import hydra
-from transformers import AutoModelForQuestionAnswering
+from transformers import AutoModelForQuestionAnswering, LayoutLMv2Processor, AutoTokenizer
 from data_loader.data_loaders import DataLoader
 from utils.util import predict_start_first
 
@@ -33,46 +33,81 @@ class Config():
 config = Config()
 
 # Define function to make predictions
-def predict(config, image, question):
+def predict(config, model, image, question):
     
-    model = AutoModelForQuestionAnswering.from_pretrained('microsoft/layoutlmv2-base-uncased').to(config.device)
-
-    data_loader = DataLoader(config, 'test')
-    tokenizer = data_loader.tokenizer
-    answers = []
-    for idx, batch in enumerate(tqdm(data_loader.test_data_loader)):
-        input_ids = batch["input_ids"].to(config.device)
-        word_ids = batch['word_ids'].to(config.device)
-        attention_mask = batch["attention_mask"].to(config.device)
-        token_type_ids = batch["token_type_ids"].to(config.device)
-        bbox = batch["bbox"].to(config.device)
-        image = batch["image"].to(config.device)
-
-        # forward + backward + optimize
-
-        with torch.no_grad():
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids,
-                                bbox=bbox, image=image)
+    processor = LayoutLMv2Processor.from_pretrained("microsoft/layoutlmv2-base-uncased")
+    encoding = processor(image, question, return_tensors="pt")
+    tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlmv2-base-uncased")
+    
+    encoding['word_ids'] = [[-1 if id is None else id for id in encoding.word_ids(i)] 
+                                       for i in range(len(encoding['question']))]
+    
+    # model
+    with torch.no_grad():
+        output = model(
+            input_ids=encoding['input_ids'], 
+            attention_mask=encoding['attention_mask'],
+            token_type_ids=encoding['token_type_ids'],
+            bbox=encoding['bbox'], image=encoding['image']
+        )
+    
+    predicted_start_idx, predicted_end_idx = predict_start_first(output)
         
-        predicted_start_idx, predicted_end_idx = predict_start_first(outputs)
+    for batch_idx in range(1):
+        answer     = ""
+        pred_start = predicted_start_idx[batch_idx]
+        pred_end   = predicted_end_idx[batch_idx]
+        word_id    = word_ids[batch_idx, pred_start]
+        for i in range(pred_start, pred_end + 1):
+            if word_id == word_ids[batch_idx, i]:
+                answer += tokenizer.decode(batch['input_ids'][batch_idx][i])
+            else:
+                answer += ' ' + tokenizer.decode(batch['input_ids'][batch_idx][i])
+                word_id = word_ids[batch_idx, i]
+
+        answer = answer.replace('##', '')
+    
+        print(answer)
+    
+    
+    # model = AutoModelForQuestionAnswering.from_pretrained('microsoft/layoutlmv2-base-uncased').to(config.device)
+
+    # data_loader = DataLoader(config, 'test')
+    # tokenizer = data_loader.tokenizer
+    # answers = []
+    # for idx, batch in enumerate(tqdm(data_loader.test_data_loader)):
+    #     input_ids = batch["input_ids"].to(config.device)
+    #     word_ids = batch['word_ids'].to(config.device)
+    #     attention_mask = batch["attention_mask"].to(config.device)
+    #     token_type_ids = batch["token_type_ids"].to(config.device)
+    #     bbox = batch["bbox"].to(config.device)
+    #     image = batch["image"].to(config.device)
+
+    #     # forward + backward + optimize
+
+    #     with torch.no_grad():
+    #         outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids,
+    #                             bbox=bbox, image=image)
         
-        for batch_idx in range(batch['input_ids'].shape[0]):
-            answer     = ""
-            pred_start = predicted_start_idx[batch_idx]
-            pred_end   = predicted_end_idx[batch_idx]
-            word_id    = word_ids[batch_idx, pred_start]
-            for i in range(pred_start, pred_end + 1):
-                if word_id == word_ids[batch_idx, i]:
-                    answer += tokenizer.decode(batch['input_ids'][batch_idx][i])
-                else:
-                    answer += ' ' + tokenizer.decode(batch['input_ids'][batch_idx][i])
-                    word_id = word_ids[batch_idx, i]
+    #     predicted_start_idx, predicted_end_idx = predict_start_first(outputs)
+        
+    #     for batch_idx in range(batch['input_ids'].shape[0]):
+    #         answer     = ""
+    #         pred_start = predicted_start_idx[batch_idx]
+    #         pred_end   = predicted_end_idx[batch_idx]
+    #         word_id    = word_ids[batch_idx, pred_start]
+    #         for i in range(pred_start, pred_end + 1):
+    #             if word_id == word_ids[batch_idx, i]:
+    #                 answer += tokenizer.decode(batch['input_ids'][batch_idx][i])
+    #             else:
+    #                 answer += ' ' + tokenizer.decode(batch['input_ids'][batch_idx][i])
+    #                 word_id = word_ids[batch_idx, i]
 
-            answer = answer.replace('##', '')
+    #         answer = answer.replace('##', '')
 
-            answers.append(answer)
+    #         answers.append(answer)
 
-    ret = [{'questionId': qid, 'answer': answer} for qid,answer in zip(data_loader.test_df['questionId'].tolist(), answers)]
+    # ret = [{'questionId': qid, 'answer': answer} for qid,answer in zip(data_loader.test_df['questionId'].tolist(), answers)]
     return ret
 
 def main(config):
@@ -80,7 +115,7 @@ def main(config):
 
     # Load deep learning model
     checkpoint = ''
-    # model = AutoModelForQuestionAnswering.from_pretrained(checkpoint)
+    model = AutoModelForQuestionAnswering.from_pretrained('microsoft/layoutlmv2-base-uncased').to(config.device)
     # model.load_state_dict(torch.load("model")) 
 
     # Create Streamlit app
@@ -103,7 +138,7 @@ def main(config):
 
         # Make the prediction
         with st.spinner('Predicting...'):
-            output = predict(config, image, question)
+            output = predict(config, model, image, question)
 
         # Show the output
         st.write('Output:', output)
