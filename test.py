@@ -54,7 +54,8 @@ def predict(config, image, question):
 
 @hydra.main(version_base="2.5", config_path=".", config_name="config.yaml")
 def main(config):
-    hydra._internal.hydra.GlobalHydra.get_state().clear()
+    hydra.core.global_hydra.GlobalHydra.instance().clear()
+
     # Load deep learning model
     checkpoint = ''
     # model = AutoModelForQuestionAnswering.from_pretrained(checkpoint)
