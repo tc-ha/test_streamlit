@@ -1,0 +1,8 @@
+pandas
+numpy
+detectron2
+streamlit
+hydra-core
+datasets
+transformers
+torch
