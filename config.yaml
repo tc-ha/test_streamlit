@@ -1,0 +1,22 @@
+# python 3.8
+
+data_dir: "/opt/ml/input/data/"
+model: "layoutlmv2"
+device: "cpu"
+checkpoint: "microsoft/layoutlmv2-base-uncased"
+use_ocr_library: False
+debug: True
+batch_data: 32
+num_proc: 8
+
+# train.py
+lr: 5e-6
+seed: 42
+batch_size: 16
+max_len: 512
+epochs: 300
+early_stop: 10
+
+# inference.py
+model_name: "saved/layoutlmv2_best.pt"
+ocr_path: /opt/ml/input/data/textract/
