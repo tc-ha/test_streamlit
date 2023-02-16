@@ -35,7 +35,7 @@ config = Config()
 # Define function to make predictions
 def predict(config, image, question):
     
-    model = AutoModelForQuestionAnswering.from_pretrained('microsoft/layoutlmv2-base-uncased', from_pt=True).to(config.device)
+    model = AutoModelForQuestionAnswering.from_pretrained('microsoft/layoutlmv2-base-uncased').to(config.device)
 
     data_loader = DataLoader(config, 'test')
     tokenizer = data_loader.tokenizer
