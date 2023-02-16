@@ -28,15 +28,15 @@ class Config():
         self.epochs = 1000
         
         self.fuzzy = False
-        self.model_name = 'saved/layoutlmv2_45.pt'#baseline_best_0130_1.pt'
+        self.model_name = ''
         
 config = Config()
 
 # Define function to make predictions
 def predict(config, image, question):
     
-    model = AutoModelForQuestionAnswering.from_pretrained(config.checkpoint).to(config.device)
-    model.load_state_dict(torch.load(config.model_name))
+    model = AutoModelForQuestionAnswering.from_pretrained('recsys13/fuz_92_4').to(config.device)
+
     data_loader = DataLoader(config, 'test')
     tokenizer = data_loader.tokenizer
     answers = []
