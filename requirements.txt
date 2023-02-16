@@ -6,3 +6,4 @@ hydra-core
 datasets
 transformers
 -e git+https://github.com/facebookresearch/detectron2.git#egg=detectron2
+thefuzz
