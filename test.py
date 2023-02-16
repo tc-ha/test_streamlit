@@ -37,10 +37,9 @@ def predict(config, model, image, question):
     
     processor = LayoutLMv2Processor.from_pretrained("microsoft/layoutlmv2-base-uncased")
     encoding = processor(image, question, return_tensors="pt")
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlmv2-base-uncased")
     
-    encoding['word_ids'] = [[-1 if id is None else id for id in encoding.word_ids(i)] 
-                                       for i in range(len(encoding['question']))]
+    word_ids = [[-1 if id is None else id for id in encoding.word_ids(i)] 
+                                       for i in range(len(question))]
     
     # model
     with torch.no_grad():
@@ -60,9 +59,9 @@ def predict(config, model, image, question):
         word_id    = word_ids[batch_idx, pred_start]
         for i in range(pred_start, pred_end + 1):
             if word_id == word_ids[batch_idx, i]:
-                answer += tokenizer.decode(batch['input_ids'][batch_idx][i])
+                answer += processor.tokenizer.decode(encoding['input_ids'][batch_idx][i])
             else:
-                answer += ' ' + tokenizer.decode(batch['input_ids'][batch_idx][i])
+                answer += ' ' + processor.tokenizer.decode(encoding['input_ids'][batch_idx][i])
                 word_id = word_ids[batch_idx, i]
 
         answer = answer.replace('##', '')
