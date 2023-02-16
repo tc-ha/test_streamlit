@@ -35,7 +35,7 @@ config = Config()
 # Define function to make predictions
 def predict(config, image, question):
     
-    model = AutoModelForQuestionAnswering.from_pretrained('fuz_92_4/layoutlmv2_last_4 (1).pt').to(config.device)
+    model = AutoModelForQuestionAnswering.from_pretrained('fuz_92_4/layoutlmv2_last_4 (1).pt', from_pt=True).to(config.device)
 
     data_loader = DataLoader(config, 'test')
     tokenizer = data_loader.tokenizer
