@@ -9,6 +9,29 @@ from transformers import AutoModelForQuestionAnswering
 from data_loader.data_loaders import DataLoader
 from utils.util import predict_start_first
 
+class Config():
+    def __init__(self):
+        self.data_dir = "/opt/ml/input/data/"
+        self.model = "layoutlmv2"
+        self.device = "cpu"
+        self.checkpoint = "microsoft/layoutlmv2-base-uncased"
+        self.use_ocr_library = False
+        self.debug = False
+        self.batch_data = 1
+        self.num_proc = 1
+        self.shuffle = True
+        
+        self.lr = 5e-6
+        self.seed = 42
+        self.batch = 1
+        self.max_len = 512
+        self.epochs = 1000
+        
+        self.fuzzy = False
+        self.model_name = 'saved/layoutlmv2_45.pt'#baseline_best_0130_1.pt'
+        
+config = Config()
+
 # Define function to make predictions
 def predict(config, image, question):
     
@@ -52,7 +75,6 @@ def predict(config, image, question):
     ret = [{'questionId': qid, 'answer': answer} for qid,answer in zip(data_loader.test_df['questionId'].tolist(), answers)]
     return ret
 
-@hydra.main(version_base="2.5", config_path=".", config_name="config.yaml")
 def main(config):
     hydra.core.global_hydra.GlobalHydra.instance().clear()
 
@@ -88,7 +110,8 @@ def main(config):
 
 
 if __name__ == '__main__':
-    main()
+    config = Config()
+    main(config)
 
 
     
